@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DeepSeek Chat</title>
+    <style>
+        body { font-family: Arial, sans-serif; }
+        #chat { width: 100%; max-width: 600px; margin: 20px auto; }
+        .message { padding: 10px; margin: 5px 0; border-radius: 5px; }
+        .user-message { background-color: #e0f7fa; }
+        .bot-response { background-color: #f1f8e9; }
+    </style>
+</head>
+<body>
+    <div id="chat">
+        <div id="messages"></div>
+        <textarea id="message" placeholder="Type a message..."></textarea><br>
+        <button onclick="sendMessage()">Send</button><br>
+        <button onclick="login()">Login</button>
+        <button onclick="register()">Register</button>
+    </div>
+
+    <script>
+        let currentUser = null;
+
+        async function login() {
+            const username = prompt("Enter username:");
+            const password = prompt("Enter password:");
+
+            const response = await fetch('/api/login/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ username, password })
+            });
+
+            if (response.ok) {
+                currentUser = await response.json();
+                alert("Login successful!");
+            } else {
+                alert("Login failed");
+            }
+        }
+
+        async function register() {
+            const username = prompt("Enter username:");
+            const password = prompt("Enter password:");
+
+            const response = await fetch('/api/register/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ username, password })
+            });
+
+            if (response.ok) {
+                alert("Registration successful!");
+            } else {
+                alert("Registration failed");
+            }
+        }
+
+        async function sendMessage() {
+            const message = document.getElementById("message").value;
+            // 实现发送消息的逻辑，这里暂时省略
+        }
+    </script>
+</body>
+</html>

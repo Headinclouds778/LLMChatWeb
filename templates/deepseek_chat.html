@@ -1,0 +1,626 @@
+<!--<!DOCTYPE html>-->
+<!--<html lang="en">-->
+<!--<head>-->
+<!--    <meta charset="UTF-8">-->
+<!--    <meta name="viewport" content="width=device-width, initial-scale=1.0">-->
+<!--    <title>AI Model Chat Interface</title>-->
+<!--    <style>-->
+<!--        /* 样式设计 */-->
+<!--        body {-->
+<!--            font-family: Arial, sans-serif;-->
+<!--            display: flex;-->
+<!--            justify-content: center;-->
+<!--            align-items: center;-->
+<!--            height: 100vh;-->
+<!--            margin: 0;-->
+<!--            background-color: #f2f2f2;-->
+<!--        }-->
+<!--        .chat-container {-->
+<!--            width: 90%;-->
+<!--            max-width: 1200px;-->
+<!--            background-color: #ffffff;-->
+<!--            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);-->
+<!--            border-radius: 8px;-->
+<!--            overflow: hidden;-->
+<!--            display: flex;-->
+<!--            flex-direction: column;-->
+<!--            height: 90vh; /* 确保容器占满整个视口 */-->
+<!--        }-->
+<!--        .chat-header {-->
+<!--            background-color: #4a90e2;-->
+<!--            color: #ffffff;-->
+<!--            padding: 10px;-->
+<!--            font-size: 18px;-->
+<!--            text-align: center;-->
+<!--        }-->
+<!--        .chat-display {-->
+<!--            flex: 1;                     /* 确保该元素可以扩展 */-->
+<!--            height: 500px;                /* 使其在父容器中占满可用空间 */-->
+<!--            padding: 15px;-->
+<!--            /*max-height: 500px;          !* 固定显示区域的最大高度 *!*/-->
+<!--            overflow-y: auto;           /* 当内容超过 max-height 时显示滚动条 */-->
+<!--            background-color: #f9f9f9;-->
+<!--        }-->
+<!--        .chat-display .message {-->
+<!--            margin-bottom: 15px;-->
+<!--            display: flex;-->
+<!--            flex-direction: column;-->
+<!--        }-->
+<!--        .chat-display .message.user {-->
+<!--            align-items: flex-end;-->
+<!--        }-->
+<!--        .chat-display .message.model {-->
+<!--            align-items: flex-start;-->
+<!--        }-->
+<!--        .message-content {-->
+<!--            padding: 10px;-->
+<!--            border-radius: 8px;-->
+<!--            max-width: 75%;-->
+<!--            font-size: 14px;-->
+<!--            color: #333;-->
+<!--        }-->
+<!--        .message.user .message-content {-->
+<!--            background-color: #4a90e2;-->
+<!--            color: #fff;-->
+<!--        }-->
+<!--        .message.model .message-content {-->
+<!--            background-color: #e2e2e2;-->
+<!--        }-->
+<!--        .chat-input {-->
+<!--            display: flex;-->
+<!--            padding: 10px;-->
+<!--            border-top: 1px solid #ddd;-->
+<!--        }-->
+<!--        .chat-input input[type="text"] {-->
+<!--            flex: 1;-->
+<!--            padding: 10px;-->
+<!--            border: 1px solid #ddd;-->
+<!--            border-radius: 4px;-->
+<!--            font-size: 14px;-->
+<!--            margin-right: 10px;-->
+<!--        }-->
+<!--        .chat-input button {-->
+<!--            padding: 10px 15px;-->
+<!--            border: none;-->
+<!--            background-color: #4a90e2;-->
+<!--            color: #fff;-->
+<!--            font-size: 14px;-->
+<!--            border-radius: 4px;-->
+<!--            cursor: pointer;-->
+<!--        }-->
+<!--        .chat-input button:hover {-->
+<!--            background-color: #357ABD;-->
+<!--        }-->
+<!--    </style>-->
+<!--</head>-->
+<!--<body>-->
+<!--    <div class="chat-container">-->
+<!--        <div class="chat-header">-->
+<!--            DeepSeek Chat-->
+<!--        </div>-->
+<!--        <div class="chat-display" id="chatDisplay">-->
+<!--            &lt;!&ndash; 对话消息展示区 &ndash;&gt;-->
+<!--        </div>-->
+<!--        <div class="chat-input">-->
+<!--&lt;!&ndash;            <input type="text" id="userInput" placeholder="Type your message here...">&ndash;&gt;-->
+<!--            <textarea id="userInput" rows="1" style="overflow:hidden; width: 100%;"></textarea>-->
+<!--            <button onclick="sendMessage()">Send</button>-->
+<!--        </div>-->
+<!--    </div>-->
+
+<!--    <script>-->
+
+<!--        // 获取输入框和发送按钮-->
+<!--        const userInput = document.getElementById("userInput");-->
+
+<!--        // 监听输入框的键盘事件-->
+<!--        userInput.addEventListener("keypress", function(event) {-->
+<!--            if (event.key === "Enter") {-->
+<!--                if (event.shiftKey) {-->
+<!--                    // 如果同时按下 Shift 键，则在输入框中换行-->
+<!--                    event.preventDefault(); // 防止默认行为-->
+<!--                    userInput.value += "\n"; // 在输入框中添加换行符-->
+<!--                    adjustHeight(); // 调整输入框高度-->
+<!--                } else {-->
+<!--                    // 否则发送消息-->
+<!--                    event.preventDefault(); // 防止默认行为-->
+<!--                    sendMessage(); // 调用发送消息的函数-->
+<!--                }-->
+<!--            }-->
+<!--        });-->
+
+<!--        // 监听输入事件以动态调整输入框高度-->
+<!--        userInput.addEventListener("input", adjustHeight);-->
+
+<!--        // 调整输入框高度的函数-->
+<!--        function adjustHeight() {-->
+<!--            userInput.style.height = 'auto'; // 重置高度-->
+<!--            userInput.style.height = `${userInput.scrollHeight}px`; // 设置为内容的高度-->
+<!--        }-->
+
+<!--        async function sendMessage() {-->
+<!--            const userInput = document.getElementById("userInput");-->
+<!--            const message = userInput.value.trim();-->
+<!--            if (message) {-->
+<!--                addMessage("user", message); // 显示用户消息-->
+<!--                userInput.value = ""; // 清空输入框-->
+
+<!--                // 获取模型响应-->
+<!--                try {-->
+<!--                    await getModelResponse(message); // 直接处理流式响应-->
+<!--                } catch (error) {-->
+<!--                    addMessage("model", "Error connecting to the server.");-->
+<!--                }-->
+<!--            }-->
+<!--        }-->
+
+<!--        async function getModelResponse(userMessage) {-->
+<!--            const response = await fetch("http://localhost:5000/get-response", {-->
+<!--                method: "POST",-->
+<!--                headers: {-->
+<!--                    "Content-Type": "application/json"-->
+<!--                },-->
+<!--                body: JSON.stringify({ message: userMessage }),-->
+<!--                mode: 'cors' // 允许跨域请求-->
+<!--            });-->
+
+<!--            const reader = response.body.getReader();-->
+<!--            const decoder = new TextDecoder("utf-8");-->
+<!--            let done = false;-->
+
+<!--            // 创建一个变量来存储累积的响应内容-->
+<!--            let accumulatedResponse = "";-->
+<!--            let flag = false;-->
+
+<!--            // 持续读取数据流-->
+<!--            while (!done) {-->
+<!--                const { value, done: doneReading } = await reader.read();-->
+<!--                done = doneReading;-->
+
+<!--                // 解码并显示每个 chunk-->
+<!--                if (value) {-->
+<!--                    const chunk = decoder.decode(value, { stream: true });-->
+
+<!--                    // 按行分割接收到的 JSON 数据-->
+<!--                    chunk.split('headinclouds').forEach(line => {-->
+<!--                        // 确保行内容非空并且是合法的 JSON 格式-->
+<!--                        if (line.trim()) {-->
+<!--                            try {-->
+<!--                                console.log(line.trim())-->
+<!--                                const jsonResponse = JSON.parse(line.trim());-->
+<!--                                if (jsonResponse && jsonResponse.response) {-->
+<!--                                    console.log(jsonResponse.response)-->
+<!--                                    accumulatedResponse += jsonResponse.response;-->
+<!--                                    addMessage("model", accumulatedResponse, flag);-->
+<!--                                    flag = true;-->
+<!--                                }-->
+<!--                                else{-->
+<!--                                    accumulatedResponse += "\n";-->
+<!--                                    addMessage("model", accumulatedResponse, flag);-->
+<!--                                    flag = true;-->
+<!--                                }-->
+<!--                            } catch (error) {-->
+<!--                                // console.error("Failed to parse JSON:", line.trim(), error);-->
+<!--                            }-->
+<!--                        }-->
+<!--                    });-->
+<!--                }-->
+<!--            }-->
+<!--        }-->
+
+
+<!--        // 定义一个变量来保存当前的消息框-->
+<!--        let currentModelMessageDiv; // 用于存储当前的模型消息框-->
+
+<!--        function addMessage(sender, message, flag) {-->
+<!--            const chatDisplay = document.getElementById("chatDisplay");-->
+<!--            var ori_text = "";-->
+<!--            if(!flag){-->
+<!--                ori_text = message;-->
+<!--            }-->
+
+<!--            if (sender === "model") {-->
+<!--                if (flag) {-->
+<!--                    // 当 flag 为 true 时，更新已有的消息框内容-->
+<!--                    if (currentModelMessageDiv) {-->
+<!--                        currentModelMessageDiv.querySelector(".message-content").textContent = ori_text + message; // 累积输出-->
+<!--                    }-->
+<!--                } else {-->
+<!--                    // 当 flag 为 false 时，创建新的消息框-->
+<!--                    currentModelMessageDiv = document.createElement("div");-->
+<!--                    currentModelMessageDiv.className = "message model"; // 设置样式-->
+<!--                    const messageContent = document.createElement("div");-->
+<!--                    messageContent.className = "message-content";-->
+<!--                    messageContent.textContent = ori_text; // 设置初始内容-->
+<!--                    currentModelMessageDiv.appendChild(messageContent);-->
+<!--                    chatDisplay.appendChild(currentModelMessageDiv);-->
+<!--                }-->
+<!--            } else {-->
+<!--                // 处理用户消息，创建新的消息框-->
+<!--                const messageDiv = document.createElement("div");-->
+<!--                messageDiv.className = "message " + sender;-->
+<!--                const messageContent = document.createElement("div");-->
+<!--                messageContent.className = "message-content";-->
+<!--                messageContent.textContent = message;-->
+<!--                messageDiv.appendChild(messageContent);-->
+<!--                chatDisplay.appendChild(messageDiv);-->
+<!--            }-->
+
+<!--            chatDisplay.scrollTop = chatDisplay.scrollHeight; // 滚动到底部-->
+<!--        }-->
+
+<!--    </script>-->
+<!--</body>-->
+<!--</html>-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Model Chat Interface</title>
+    <style>
+        /* 样式设计 */
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f2f2f2;
+        }
+        .chat-container {
+            width: 90%;
+            max-width: 1200px;
+            background-color: #ffffff;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 90vh; /* 确保容器占满整个视口 */
+        }
+        .chat-header {
+            background-color: #4a90e2;
+            color: #ffffff;
+            padding: 10px;
+            font-size: 18px;
+            text-align: center;
+            position: relative;
+        }
+        .chat-header .user-info {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            display: flex;
+            align-items: center;
+        }
+        .chat-display {
+            flex: 1;                     /* 确保该元素可以扩展 */
+            height: 500px;                /* 使其在父容器中占满可用空间 */
+            padding: 15px;
+            overflow-y: auto;           /* 当内容超过 max-height 时显示滚动条 */
+            background-color: #f9f9f9;
+
+            position: relative; /* 为子元素提供定位上下文 */
+            background-image: url('/static/image/zhuhaisunset.jpg') !important;
+            background-size: cover; /* 让图片覆盖整个区域 */
+            background-repeat: no-repeat;
+            background-position: center;
+            background-attachment: fixed; /* 背景固定 */
+            width: 1160px; /* 设置宽度 */
+            height: 540px; /* 设置高度 */
+            overflow-y: auto; /* 当内容超出时显示滚动条 */
+            padding: 20px; /* 让内容距离边缘有间距 */
+        }
+        .chat-display .message {
+            margin-bottom: 15px;
+            display: flex;
+            flex-direction: column;
+        }
+        .chat-display .message.user {
+            align-items: flex-end;
+        }
+        .chat-display .message.model {
+            position: relative; /* 让消息框层叠在背景之上 */
+            z-index: 10; /* 确保消息框位于背景之上 */
+            margin-bottom: 10px; /* 消息框之间的间距 */
+        }
+        .message-content {
+            padding: 10px;
+            border-radius: 8px;
+            max-width: 75%;
+            font-size: 14px;
+            color: #333;
+        }
+        .message.user .message-content {
+            background-color: #4a90e2;
+            color: #fff;
+        }
+        .message.model .message-content {
+            background-color: #e2e2e2;
+        }
+        .chat-input {
+            display: flex;
+            padding: 10px;
+            border-top: 1px solid #ddd;
+        }
+        .chat-input input[type="text"] {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            margin-right: 10px;
+            pointer-events: none; /* 禁用输入框，默认为不可输入 */
+        }
+        .chat-input button {
+            padding: 10px 15px;
+            border: none;
+            background-color: #4a90e2;
+            color: #fff;
+            font-size: 14px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .chat-input button:hover {
+            background-color: #357ABD;
+        }
+        .chat-header button {
+            margin-left: 10px;
+            background-color: #357ABD;
+        }
+        .chat-header button:hover {
+            background-color: #4a90e2;
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            DeepSeek Chat
+            <div class="user-info">
+                <!-- 登录/注册 或 用户信息区 -->
+                <button id="loginButton" onclick="redirectToLogin()">Login</button>
+                <button id="registerButton" onclick="redirectToRegister()">Register</button>
+                <span id="userInfo" style="display:none;"></span>
+                <button id="logoutButton" onclick="logout()" style="display:none;">Logout</button>
+            </div>
+        </div>
+        <div class="chat-display" id="chatDisplay">
+            <div class="message user"></div>
+            <div class="message model"></div>
+        </div>
+        <div class="chat-input">
+            <textarea id="userInput" rows="1" style="overflow:hidden; width: 100%;" placeholder="Please login to chat"
+            onkeydown="handleKeyDown(event)"></textarea>
+            <button onclick="sendMessage()">Send</button>
+        </div>
+    </div>
+
+    <script>
+        // 获取输入框和发送按钮
+        const userInput = document.getElementById("userInput");
+
+        // 检查用户是否已登录的函数
+        function checkLoginStatus() {
+            // 假设用户登录状态存储在本地存储中
+            const isLoggedIn = localStorage.getItem("isLoggedIn") === "true";
+            const username = localStorage.getItem("username");
+
+            if (isLoggedIn) {
+                // 用户已登录
+                document.getElementById("userInfo").textContent = username;
+                document.getElementById("userInfo").style.display = "inline";
+                document.getElementById("logoutButton").style.display = "inline";
+                document.getElementById("loginButton").style.display = "none";
+                document.getElementById("registerButton").style.display = "none";
+                userInput.disabled = false;  // 允许用户输入
+                userInput.placeholder = "Type your message here...";
+            } else {
+                // 用户未登录
+                document.getElementById("loginButton").style.display = "inline";
+                document.getElementById("registerButton").style.display = "inline";
+                document.getElementById("logoutButton").style.display = "none";
+                document.getElementById("userInfo").style.display = "none";
+                userInput.disabled = true;  // 禁止用户输入
+            }
+        }
+
+        // 登录按钮点击事件
+        function redirectToLogin() {
+            window.location.href = "/login_view";  // 重定向到登录页
+        }
+
+        // 注册按钮点击事件
+        function redirectToRegister() {
+            window.location.href = "/register_view";  // 重定向到注册页
+        }
+
+        // 退出登录函数
+        function logout() {
+            localStorage.removeItem("isLoggedIn");
+            localStorage.removeItem("username");
+            checkLoginStatus();  // 更新界面
+
+            // 清空对话框内容
+            const chatBox = document.getElementById("chatDisplay"); // 假设对话框的 ID 是 chatBox
+            if (chatBox) {
+                chatBox.innerHTML = ""; // 清空对话框内容
+            }
+
+            // 可选：显示一个提示，说明对话已清空
+            alert("You have been logged out. The chat has been cleared.");
+        }
+
+        // 发送消息函数
+        // async function sendMessage() {
+        //     const message = userInput.value.trim();
+        //     if (message) {
+        //         addMessage("user", message); // 显示用户消息
+        //         userInput.value = ""; // 清空输入框
+        //
+        //         // 获取模型响应
+        //         try {
+        //             await getModelResponse(message); // 直接处理流式响应
+        //         } catch (error) {
+        //             addMessage("model", "Error connecting to the server.");
+        //         }
+        //     }
+        // }
+
+        function handleKeyDown(event) {
+            const textarea = document.getElementById('userInput');
+            if (event.key === "Enter" && !event.shiftKey) {
+                event.preventDefault(); // 阻止默认换行行为
+                sendMessage(); // 调用发送消息函数
+            } else if (event.key === "Enter" && event.shiftKey) {
+                // 允许 Shift+Enter 换行
+                const cursorPos = textarea.selectionStart;
+                const text = textarea.value;
+                textarea.value = text.substring(0, cursorPos) + "\n" + text.substring(cursorPos);
+                textarea.selectionStart = textarea.selectionEnd = cursorPos + 1; // 调整光标位置
+                event.preventDefault(); // 阻止默认换行行为
+            }
+        }
+        async function sendMessage() {
+            const textarea = document.getElementById('userInput');
+            const message = textarea.value.trim();
+            if (message) {
+                addMessage("user", message); // 显示用户消息
+                // 发送消息后清空输入框
+                textarea.value = '';
+
+                // 获取模型响应
+                try {
+                    await getModelResponse(message); // 直接处理流式响应
+                } catch (error) {
+                    addMessage("model", "Error connecting to the server.");
+                }
+            }
+        }
+
+        async function getModelResponse(userMessage) {
+            const response = await fetch("http://localhost:5000/get-response", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ message: userMessage }),
+                mode: 'cors' // 允许跨域请求
+            });
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder("utf-8");
+            let done = false;
+
+            // 创建一个变量来存储累积的响应内容
+            let accumulatedResponse = "";
+            let flag = false;
+
+            // 持续读取数据流
+            while (!done) {
+                const { value, done: doneReading } = await reader.read();
+                done = doneReading;
+
+                // 解码并显示每个 chunk
+                if (value) {
+                    const chunk = decoder.decode(value, { stream: true });
+
+                    // 按行分割接收到的 JSON 数据
+                    // chunk.split('headinclouds').forEach(line => {
+                    //     // 确保行内容非空并且是合法的 JSON 格式
+                    //     if (line.trim()) {
+                    //         try {
+                    //             console.log(line.trim())
+                    //             const jsonResponse = JSON.parse(line.trim());
+                    //             if (jsonResponse && jsonResponse.response) {
+                    //                 accumulatedResponse += jsonResponse.response;
+                    //                 addMessage("model", accumulatedResponse, flag);
+                    //                 // console.log(accumulatedResponse)
+                    //                 flag = true;
+                    //             }
+                    //             else{
+                    //                 accumulatedResponse += "\n";
+                    //                 addMessage("model", accumulatedResponse, flag);
+                    //                 // console.log(accumulatedResponse)
+                    //                 flag = true;
+                    //             }
+                    //         } catch (error) {
+                    //             console.error("Failed to parse JSON:", line.trim(), error);
+                    //         }
+                    //     }
+                    // });
+                    chunk.split('headinclouds').forEach(line => {
+                        // 确保行内容非空并且是合法的 JSON 格式
+                        if (line.trim()) {
+                            try {
+                                console.log(line.trim());
+                                const jsonResponse = JSON.parse(line.trim());
+                                if (jsonResponse && jsonResponse.response) {
+                                    accumulatedResponse += jsonResponse.response;
+                                    addMessage("model", accumulatedResponse, flag);
+                                    flag = true;
+                                }
+                            } catch (error) {
+                                console.error("Failed to parse JSON:", line.trim(), error);
+                                accumulatedResponse += "\n";
+                                addMessage("model", accumulatedResponse, flag);
+                                flag = true;
+                            }
+                        }
+                    });
+                }
+            }
+        }
+
+
+        // 定义一个变量来保存当前的消息框
+        let currentModelMessageDiv; // 用于存储当前的模型消息框
+
+        function addMessage(sender, message, flag) {
+            message = message.replace(/\n/g, '\r\n');
+            const chatDisplay = document.getElementById("chatDisplay");
+            chatDisplay.setAttribute('style', 'white-space: pre-wrap;');
+            var ori_text = "";
+            if(!flag){
+                ori_text = message;
+            }
+
+            if (sender === "model") {
+                if (flag) {
+                    // 当 flag 为 true 时，更新已有的消息框内容
+                    if (currentModelMessageDiv) {
+                        currentModelMessageDiv.querySelector(".message-content").textContent = ori_text + message; // 累积输出
+                    }
+                } else {
+                    // 当 flag 为 false 时，创建新的消息框
+                    currentModelMessageDiv = document.createElement("div");
+                    currentModelMessageDiv.className = "message model"; // 设置样式
+                    const messageContent = document.createElement("div");
+                    messageContent.className = "message-content";
+                    messageContent.textContent = ori_text; // 设置初始内容
+                    currentModelMessageDiv.appendChild(messageContent);
+                    chatDisplay.appendChild(currentModelMessageDiv);
+                }
+            } else {
+                // 处理用户消息，创建新的消息框
+                const messageDiv = document.createElement("div");
+                messageDiv.className = "message " + sender;
+                const messageContent = document.createElement("div");
+                messageContent.className = "message-content";
+                messageContent.textContent = message;
+                messageDiv.appendChild(messageContent);
+                chatDisplay.appendChild(messageDiv);
+            }
+
+            chatDisplay.scrollTop = chatDisplay.scrollHeight; // 滚动到底部
+        }
+
+        // 初始化检查用户登录状态
+        window.onload = function() {
+            checkLoginStatus();  // 在页面加载时重新检查登录状态
+        }
+    </script>
+</body>
+</html>
