@@ -19,4 +19,8 @@ hint:两个模型的调用都不需要代理，其次本人打开代理时调用
     python manage.py runserver 0.0.0.0:8000
     python server.py
 
+启动项目后，在浏览器输入网址 **127.0.0.1:8000/deepseek_chat** 以访问网站
+
+或直接点击[这个链接](127.0.0.1:8000/deepseek_chat)
+
 祝你使用愉快，可以给个star吗
